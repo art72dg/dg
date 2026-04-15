@@ -222,7 +222,73 @@ export default function NewAnalysisPage() {
 
       const { data: analysis } = await analysisRes.json() as { data: { id: string } }
 
-      // 3. Run scoring
+      // 3. Save financial data
+      const financialPayload = {
+        analysisId: analysis.id,
+        period: financial.period,
+        currency: financial.currency,
+        unit: financial.unit,
+        balanceSheet: {
+          totalAssets: num(financial.totalAssets),
+          currentAssets: num(financial.currentAssets),
+          cash: num(financial.cash),
+          accountsReceivable: parseNum(financial.accountsReceivable),
+          inventory: parseNum(financial.inventory),
+          totalLiabilities: num(financial.totalLiabilities),
+          currentLiabilities: num(financial.currentLiabilities),
+          shortTermDebt: parseNum(financial.shortTermDebt),
+          accountsPayable: parseNum(financial.accountsPayable),
+          longTermDebt: parseNum(financial.longTermDebt),
+          equity: num(financial.equity),
+        },
+        incomeStatement: {
+          revenue: num(financial.revenue),
+          grossProfit: parseNum(financial.grossProfit),
+          ebitda: num(financial.ebitda),
+          ebit: parseNum(financial.ebit),
+          interestExpense: num(financial.interestExpense),
+          netIncome: num(financial.netIncome),
+        },
+        cashFlow:
+          financial.operatingCashFlow || financial.capitalExpenditure || financial.freeCashFlow
+            ? {
+                operatingCashFlow: parseNum(financial.operatingCashFlow),
+                capitalExpenditure: parseNum(financial.capitalExpenditure),
+                freeCashFlow: parseNum(financial.freeCashFlow),
+              }
+            : undefined,
+        qualitativeData: {
+          hasCovenantBreach: qual.hasCovenantBreach,
+          hasInsolvencyProceedings: qual.hasInsolvencyProceedings,
+          hasMajorClientLoss: qual.hasMajorClientLoss,
+          hasSeniorManagementDeparture: qual.hasSeniorManagementDeparture,
+          hasQualifiedAuditReport: qual.hasQualifiedAuditReport,
+          hasSupplierPaymentDelay: qual.hasSupplierPaymentDelay,
+          clientConcentrationPct: parseNum(qual.clientConcentrationPct),
+          hasRefinancingDependency: qual.hasRefinancingDependency,
+          hasNegativeEbitdaStreak: qual.hasNegativeEbitdaStreak,
+          hasMaterialLitigation: qual.hasMaterialLitigation,
+          hasTaxComplianceIssues: qual.hasTaxComplianceIssues,
+          hasNewFinancing: qual.hasNewFinancing,
+          hasNewMultiyearContract: qual.hasNewMultiyearContract,
+          hasDebtRestructuringCompleted: qual.hasDebtRestructuringCompleted,
+          hasNewStrategicShareholder: qual.hasNewStrategicShareholder,
+          additionalContext: qual.additionalContext || undefined,
+        },
+      }
+
+      const financialRes = await fetch('/api/financial-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(financialPayload),
+      })
+
+      if (!financialRes.ok) {
+        const body = await financialRes.json() as { error?: string }
+        throw new Error(body.error ?? 'Erro ao guardar dados financeiros')
+      }
+
+      // 4. Run scoring
       const scoringPayload = {
         analysisId: analysis.id,
         financialData: {

@@ -169,20 +169,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: report }, { status: 201 })
   } catch (error) {
     console.error('[POST /api/reports]', error)
-
-    // Marcar como erro
-    const body = await (async () => {
-      try { return await (request as NextRequest).json() } catch { return {} }
-    })()
-
-    if (body.analysisId) {
-      const supabase = await createClient()
-      await supabase
-        .from('analyses')
-        .update({ status: 'error', error_message: String(error) })
-        .eq('id', body.analysisId)
-    }
-
     return NextResponse.json({ error: 'Erro ao gerar relatório' }, { status: 500 })
   }
 }
