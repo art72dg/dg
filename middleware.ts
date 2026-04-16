@@ -1,0 +1,19 @@
+// middleware.ts — obrigatório para Supabase SSR auth
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
+
+export async function middleware(request: NextRequest) {
+  return await updateSession(request)
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Aplica a todas as rotas excepto:
+     * - _next/static (static files)
+     * - _next/image (image optimisation)
+     * - favicon.ico, sitemap.xml, robots.txt
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}

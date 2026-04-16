@@ -126,6 +126,12 @@ export async function POST(request: NextRequest) {
 
     if (saveError) throw saveError
 
+    // Actualizar status para 'draft' após score calculado com sucesso
+    await supabase
+      .from('analyses')
+      .update({ status: 'draft' })
+      .eq('id', analysisId)
+
     return NextResponse.json({ data: scoringResult }, { status: 200 })
   } catch (error) {
     console.error('[POST /api/scoring]', error)

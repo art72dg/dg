@@ -39,26 +39,45 @@ export async function generateReport(
   systemPrompt: string,
   sections: Array<{ key: string; prompt: string }>
 ): Promise<Record<string, string>> {
+  // Gera todas as secções numa única chamada para evitar timeout
+  const sectionList = sections.map((s, i) =>
+    `### SECÇÃO ${i + 1}: ${s.key.toUpperCase()}\n${s.prompt}`
+  ).join('\n\n---\n\n')
+
+  const userMessage = `Gera o relatório completo de diagnóstico financeiro com as seguintes secções. Para cada secção, começa exactamente com o marcador ===SECÇÃO:${'{key}'}=== onde {key} é o identificador indicado, seguido do conteúdo.\n\nFormato obrigatório para cada secção:\n===SECÇÃO:executive_summary===\n[conteúdo]\n===SECÇÃO:liquidity_analysis===\n[conteúdo]\netc.\n\nSecções a gerar:\n\n${sectionList}`
+
+  const userMessageFinal = `Gera o relatório completo de diagnóstico financeiro. Para cada secção usa exactamente este formato de marcador no início: ===SECÇÃO:{key}=== (substituindo {key} pelo identificador da secção).\n\n${sectionList}`
+
+  // Usa Haiku: 5-10x mais rápido que Sonnet, cabe dentro do limite de 60s do Vercel
+  const response = await client.messages.create({
+    model: MODELS.helper,
+    max_tokens: 3000,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userMessageFinal }],
+  })
+
+  const block = response.content[0]
+  if (block.type !== 'text') throw new Error('Resposta inesperada da API Claude')
+
+  const fullText = block.text
   const results: Record<string, string> = {}
 
-  // Gerar secções em série para manter contexto
-  const messages: Anthropic.MessageParam[] = []
+  // Extrair cada secção pelo marcador ===SECÇÃO:{key}===
+  for (let i = 0; i < sections.length; i++) {
+    const current = sections[i]
+    const next = sections[i + 1]
+    const startMarker = `===SECÇÃO:${current.key}===`
+    const endMarker = next ? `===SECÇÃO:${next.key}===` : null
 
-  for (const section of sections) {
-    messages.push({ role: 'user', content: section.prompt })
+    const startIdx = fullText.indexOf(startMarker)
+    if (startIdx === -1) {
+      results[current.key] = ''
+      continue
+    }
 
-    const response = await client.messages.create({
-      model: MODELS.analysis,
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages,
-    })
-
-    const block = response.content[0]
-    if (block.type !== 'text') throw new Error(`Erro ao gerar secção ${section.key}`)
-
-    results[section.key] = block.text
-    messages.push({ role: 'assistant', content: block.text })
+    const contentStart = startIdx + startMarker.length
+    const contentEnd = endMarker ? fullText.indexOf(endMarker) : fullText.length
+    results[current.key] = fullText.slice(contentStart, contentEnd !== -1 ? contentEnd : undefined).trim()
   }
 
   return results

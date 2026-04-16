@@ -1,135 +1,208 @@
+'use client'
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="flex flex-col flex-1 min-h-screen bg-slate-950">
+    <main className="flex flex-col flex-1 min-h-screen" style={{ background: 'hsl(var(--background))' }}>
       {/* Top bar */}
-      <div className="border-b border-slate-800/60 px-6 py-3 flex items-center justify-between">
+      <div style={{ borderBottom: '1px solid hsl(var(--border))' }} className="px-6 py-3 flex items-center justify-between">
         <a
           href="https://www.duointernational.pt"
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          className="flex items-center gap-1.5 transition-opacity duration-300"
+          style={{ color: 'hsl(var(--muted-foreground))', opacity: 0.65 }}
+          onMouseOver={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseOut={(e) => (e.currentTarget.style.opacity = '0.65')}
         >
           <span>←</span>
-          <span>DUO International</span>
+          <span className="label-uppercase" style={{ fontSize: '0.625rem' }}>DUO International</span>
         </a>
-        <a
-          href="https://www.duointernational.pt"
-          className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
-        >
-          duointernational.pt
-        </a>
+        <span className="label-uppercase" style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.625rem' }}>
+          turnaround-ai
+        </span>
       </div>
 
-    <div className="flex flex-col flex-1 items-center justify-center px-6">
-      {/* Hero */}
-      <div className="max-w-3xl w-full text-center space-y-8">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-1.5 text-sm text-slate-400">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Diagnóstico financeiro por IA
+      <div className="flex flex-col flex-1 section-container py-32 md:py-48">
+        {/* Hero */}
+        <div className="max-w-3xl w-full space-y-10">
+          {/* Label */}
+          <p className="label-uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            Diagnóstico Empresarial · DUO International
+          </p>
+
+          {/* Title */}
+          <div className="space-y-4">
+            <h1
+              className="font-display"
+              style={{
+                fontSize: 'clamp(3rem, 8vw, 5.5rem)',
+                fontWeight: 300,
+                lineHeight: 1.05,
+                color: 'hsl(var(--foreground))',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Turnaround AI
+            </h1>
+            <p
+              className="font-display"
+              style={{
+                fontSize: 'clamp(1.125rem, 2.5vw, 1.5rem)',
+                fontStyle: 'italic',
+                fontWeight: 400,
+                color: 'hsl(var(--muted-foreground))',
+                lineHeight: 1.4,
+              }}
+            >
+              "Diagnóstico financeiro estruturado para empresas em momentos decisivos."
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div style={{ borderTop: '1px solid hsl(var(--border) / 0.5)', paddingTop: '2rem' }}>
+            <p style={{ fontSize: '0.8125rem', lineHeight: '1.75', color: 'hsl(var(--muted-foreground))' }}>
+              Scoring estruturado em 5 blocos, análise de risco e dossiers estratégicos
+              gerados por IA — para decisões de investimento, reestruturação e financiamento.
+            </p>
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            <Link
+              href="/register"
+              className="inline-flex h-11 items-center justify-center px-8 text-sm font-medium transition-opacity duration-300"
+              style={{
+                background: 'hsl(var(--primary))',
+                color: 'hsl(var(--primary-foreground))',
+                borderRadius: 'var(--radius)',
+                letterSpacing: '0.05em',
+                opacity: 1,
+              }}
+            >
+              Começar gratuitamente
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex h-11 items-center justify-center px-8 text-sm font-medium transition-opacity duration-300"
+              style={{
+                border: '1px solid hsl(var(--border))',
+                color: 'hsl(var(--foreground))',
+                borderRadius: 'var(--radius)',
+                letterSpacing: '0.05em',
+                opacity: 0.7,
+              }}
+            >
+              Entrar na conta
+            </Link>
+          </div>
         </div>
 
-        {/* Title */}
-        <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl">
-          Turnaround{" "}
-          <span className="text-emerald-400">AI</span>
-        </h1>
-        <p className="text-sm text-slate-500 -mt-4">
-          Uma ferramenta da{" "}
-          <a href="https://www.duointernational.pt" className="hover:text-slate-400 underline underline-offset-2 transition-colors">
-            DUO International
-          </a>
-        </p>
-
-        <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          Diagnóstico financeiro premium para empresas em dificuldade.
-          Scoring estruturado em 5 blocos, análise de risco e dossiers
-          estratégicos gerados por IA em minutos.
-        </p>
-
         {/* Score preview */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mt-8">
+        <div className="grid grid-cols-2 gap-px sm:grid-cols-4 mt-20" style={{ border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' }}>
           {[
-            { label: "Liquidez", score: 72, color: "yellow" },
-            { label: "Rentabilidade", score: 45, color: "orange" },
-            { label: "Estrutura", score: 38, color: "orange" },
-            { label: "Score Global", score: 52, color: "yellow", highlight: true },
-          ].map((item) => (
+            { label: "Liquidez", score: 72 },
+            { label: "Rentabilidade", score: 45 },
+            { label: "Estrutura", score: 38 },
+            { label: "Score Global", score: 52, highlight: true },
+          ].map((item, i) => (
             <div
               key={item.label}
-              className={`rounded-xl border p-4 text-center ${
-                item.highlight
-                  ? "border-emerald-500/30 bg-emerald-950/30"
-                  : "border-slate-700 bg-slate-900"
-              }`}
+              className="p-6 text-center"
+              style={{
+                background: item.highlight ? 'hsl(var(--card))' : 'hsl(var(--background))',
+                borderLeft: i > 0 ? '1px solid hsl(var(--border))' : 'none',
+              }}
             >
-              <div className={`text-3xl font-bold ${
-                item.color === "yellow" ? "text-yellow-400" :
-                item.color === "orange" ? "text-orange-400" :
-                "text-emerald-400"
-              }`}>
+              <div
+                className="font-display"
+                style={{
+                  fontSize: '2.5rem',
+                  fontWeight: 300,
+                  color: item.highlight ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
+                  lineHeight: 1,
+                }}
+              >
                 {item.score}
               </div>
-              <div className="text-xs text-slate-500 mt-1">{item.label}</div>
+              <div className="label-uppercase mt-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                {item.label}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-          <Link
-            href="/register"
-            className="inline-flex h-12 items-center justify-center rounded-lg bg-emerald-500 px-8 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400"
-          >
-            Começar gratuitamente
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex h-12 items-center justify-center rounded-lg border border-slate-700 px-8 text-sm font-semibold text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
-          >
-            Entrar na conta
-          </Link>
-        </div>
-
         {/* Features */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mt-16 text-left">
+        <div className="grid grid-cols-1 gap-0 sm:grid-cols-3 mt-20" style={{ borderTop: '1px solid hsl(var(--border))' }}>
           {[
             {
-              icon: "📊",
+              num: "01",
               title: "Scoring em 5 Blocos",
               desc: "Liquidez, Rentabilidade, Estrutura, Operacional e Sinais Críticos — score 0 a 100 com 4 níveis de risco.",
             },
             {
-              icon: "🤖",
+              num: "02",
               title: "Dossier por IA",
               desc: "Claude Sonnet gera análise narrativa completa: diagnóstico, cenários, recomendações e plano de acção.",
             },
             {
-              icon: "🔒",
+              num: "03",
               title: "Dados Protegidos",
               desc: "Row Level Security no Supabase — os teus dados financeiros nunca são partilhados.",
             },
-          ].map((f) => (
-            <div key={f.title} className="rounded-xl border border-slate-700 bg-slate-900 p-6">
-              <div className="text-2xl mb-3">{f.icon}</div>
-              <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
+          ].map((f, i) => (
+            <div
+              key={f.title}
+              className="py-8 pr-8"
+              style={{
+                borderRight: i < 2 ? '1px solid hsl(var(--border))' : 'none',
+                paddingLeft: i > 0 ? '2rem' : '0',
+              }}
+            >
+              <div className="label-uppercase mb-4" style={{ color: 'hsl(var(--primary))', opacity: 0.6 }}>
+                {f.num}
+              </div>
+              <h3
+                className="font-display mb-3"
+                style={{ fontSize: '1.25rem', fontWeight: 500, color: 'hsl(var(--foreground))' }}
+              >
+                {f.title}
+              </h3>
+              <p style={{ fontSize: '0.8125rem', lineHeight: '1.75', color: 'hsl(var(--muted-foreground))' }}>
+                {f.desc}
+              </p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="mt-20 text-center text-xs text-slate-600 pb-8 space-y-1">
-        <p>
-          Turnaround AI · Uma ferramenta da{" "}
-          <a href="https://www.duointernational.pt" className="hover:text-slate-400 underline underline-offset-2 transition-colors">
-            DUO International
-          </a>
-        </p>
-        <p>Análise indicativa, não constitui conselho de investimento</p>
+      <footer
+        className="section-container pb-10 mt-auto"
+        style={{ borderTop: '1px solid hsl(var(--border))' }}
+      >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-8">
+          <p className="label-uppercase" style={{ color: 'hsl(var(--muted-foreground))', opacity: 0.5 }}>
+            Turnaround AI · Uma ferramenta da{" "}
+            <a
+              href="https://www.duointernational.pt"
+              style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+            >
+              DUO International
+            </a>
+          </p>
+          <div className="flex items-center gap-4">
+            <p className="label-uppercase" style={{ color: 'hsl(var(--muted-foreground))', opacity: 0.35 }}>
+              Análise indicativa, não constitui conselho de investimento
+            </p>
+            <Link
+              href="/ai-act"
+              className="label-uppercase"
+              style={{ color: 'hsl(var(--muted-foreground))', opacity: 0.35, textDecoration: 'none' }}
+            >
+              Termos · AI Act
+            </Link>
+          </div>
+        </div>
       </footer>
-    </div>
     </main>
   );
 }

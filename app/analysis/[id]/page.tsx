@@ -7,6 +7,7 @@ import { RiskBadge } from '@/components/scoring/risk-badge'
 import { ScoreBreakdown } from '@/components/scoring/score-breakdown'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { GenerateDossierButton } from './generate-dossier-button'
+import { StatusPoller } from './status-poller'
 import type { AnalysisStatus } from '@/types/report'
 import type { ScoringBlock, RiskLevel, RiskFlag } from '@/types/scoring'
 import type { ReportSection } from '@/types/report'
@@ -157,6 +158,9 @@ export default async function AnalysisPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* Auto-refresh enquanto status for scoring/generating */}
+      <StatusPoller status={status} />
+
       {/* Nav */}
       <nav className="border-b border-slate-800 bg-slate-900">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">

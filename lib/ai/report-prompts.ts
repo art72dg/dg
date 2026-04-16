@@ -55,66 +55,45 @@ export function buildReportSections(
   scoring: ScoringResult,
   financial: FinancialData
 ): Array<{ key: string; prompt: string }> {
+  const liq = scoring.blocks.find(b => b.name === 'liquidity')?.rawScore.toFixed(1)
+  const prof = scoring.blocks.find(b => b.name === 'profitability')?.rawScore.toFixed(1)
+  const struct = scoring.blocks.find(b => b.name === 'financial_structure')?.rawScore.toFixed(1)
+  const ops = scoring.blocks.find(b => b.name === 'operational_quality')?.rawScore.toFixed(1)
+  const criticals = scoring.flags.filter(f => f.severity === 'critical').length
+  const warnings = scoring.flags.filter(f => f.severity === 'warning').length
+
   return [
     {
       key: 'executive_summary',
-      prompt: `Escreve o Sumário Executivo desta análise. Deve ter 3 parágrafos:
-1. Diagnóstico global (situação actual, score, nível de risco)
-2. Principais pontos fortes e fracos identificados
-3. Urgência e natureza da intervenção necessária
-
-Máximo 300 palavras.`,
+      prompt: `Sumário Executivo (máx. 150 palavras): diagnóstico global, pontos-chave e urgência da intervenção.`,
     },
     {
       key: 'liquidity_analysis',
-      prompt: `Com base no bloco de Liquidez (score: ${scoring.blocks.find(b => b.name === 'liquidity')?.rawScore.toFixed(1)}/100), escreve a secção de Análise de Liquidez.
-Inclui: interpretação dos rácios, posição de tesouraria, capacidade de cumprir obrigações de curto prazo, e recomendações específicas.
-Máximo 250 palavras.`,
+      prompt: `Análise de Liquidez — score ${liq}/100 (máx. 120 palavras): rácios, tesouraria, obrigações curto prazo, 2 recomendações.`,
     },
     {
       key: 'profitability_analysis',
-      prompt: `Com base no bloco de Rentabilidade (score: ${scoring.blocks.find(b => b.name === 'profitability')?.rawScore.toFixed(1)}/100), escreve a secção de Análise de Rentabilidade.
-Inclui: análise de margens, evolução implícita, eficiência na geração de retornos, e recomendações.
-Máximo 250 palavras.`,
+      prompt: `Análise de Rentabilidade — score ${prof}/100 (máx. 120 palavras): margens, eficiência, 2 recomendações.`,
     },
     {
       key: 'financial_structure',
-      prompt: `Com base no bloco de Estrutura Financeira (score: ${scoring.blocks.find(b => b.name === 'financial_structure')?.rawScore.toFixed(1)}/100), escreve a secção de Estrutura Financeira.
-Inclui: análise de endividamento, cobertura de juros, sustentabilidade da dívida, e opções de reestruturação.
-Máximo 250 palavras.`,
+      prompt: `Estrutura Financeira — score ${struct}/100 (máx. 120 palavras): endividamento, cobertura juros, sustentabilidade, 2 opções.`,
     },
     {
       key: 'operational_quality',
-      prompt: `Com base no bloco Operacional (score: ${scoring.blocks.find(b => b.name === 'operational_quality')?.rawScore.toFixed(1)}/100), escreve a secção de Qualidade Operacional.
-Inclui: eficiência do ciclo operacional, gestão de capital circulante, e recomendações de melhoria.
-Máximo 200 palavras.`,
+      prompt: `Qualidade Operacional — score ${ops}/100 (máx. 100 palavras): ciclo operacional, capital circulante, 2 melhorias.`,
     },
     {
       key: 'risk_signals',
-      prompt: `Com base nos Sinais Críticos identificados (${scoring.flags.filter(f => f.severity === 'critical').length} críticos, ${scoring.flags.filter(f => f.severity === 'warning').length} avisos), escreve a secção de Sinais de Alerta.
-Para cada flag crítico, indica: descrição do risco, impacto potencial, e acção imediata recomendada.
-Máximo 300 palavras.`,
+      prompt: `Sinais de Alerta — ${criticals} críticos, ${warnings} avisos (máx. 150 palavras): risco, impacto e acção imediata para cada flag crítico.`,
     },
     {
       key: 'scenarios',
-      prompt: `Com base em toda a análise, escreve 3 cenários para a empresa nos próximos 12-18 meses:
-1. **Cenário Base** — se mantiver o curso actual
-2. **Cenário Optimista** — se executar as principais recomendações com sucesso
-3. **Cenário Pessimista** — se a situação se deteriorar sem intervenção
-
-Para cada cenário, indica probabilidade estimada e principais indicadores de monitorização.
-Máximo 300 palavras.`,
+      prompt: `3 Cenários 12-18 meses (máx. 150 palavras): Base / Optimista / Pessimista — probabilidade e 2 indicadores cada.`,
     },
     {
       key: 'recommendations',
-      prompt: `Com base em toda a análise, escreve as Recomendações prioritárias.
-Organiza por horizonte temporal:
-- **Urgente (0-30 dias):** acções críticas imediatas
-- **Curto Prazo (1-3 meses):** estabilização
-- **Médio Prazo (3-12 meses):** transformação
-
-Para cada recomendação: acção concreta, responsável sugerido, e métrica de sucesso.
-Máximo 400 palavras.`,
+      prompt: `Recomendações prioritárias (máx. 200 palavras): Urgente 0-30d / Curto Prazo 1-3m / Médio Prazo 3-12m — acção concreta e métrica de sucesso.`,
     },
   ]
 }

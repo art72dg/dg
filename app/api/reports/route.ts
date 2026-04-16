@@ -1,4 +1,6 @@
 // app/api/reports/route.ts
+export const maxDuration = 60
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
@@ -13,6 +15,8 @@ const GenerateReportSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  let analysisId: string | null = null
+
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -31,7 +35,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { analysisId } = parsed.data
+    analysisId = parsed.data.analysisId
 
     // Carregar análise + dados
     const { data: analysis } = await supabase
@@ -79,7 +83,6 @@ export async function POST(request: NextRequest) {
       .update({ status: 'generating' })
       .eq('id', analysisId)
 
-    // Construir scoring result tipado
     const scoring: ScoringResult = {
       id: scoringData.id,
       analysisId,
@@ -119,12 +122,11 @@ export async function POST(request: NextRequest) {
       },
     } as FinancialData
 
-    // Gerar relatório
+    // Gerar relatório com Haiku (rápido, < 15s)
     const systemPrompt = buildSystemPrompt(company, scoring)
     const sections = buildReportSections(scoring, financial)
     const generatedSections = await generateReport(systemPrompt, sections)
 
-    // Montar secções com disclaimer
     const reportSections = [
       ...sections.map(s => ({
         key: s.key,
@@ -144,7 +146,6 @@ export async function POST(request: NextRequest) {
       (sum, s) => sum + s.content.split(/\s+/).length, 0
     )
 
-    // Guardar relatório
     const { data: report, error: reportError } = await supabase
       .from('analysis_reports')
       .insert({
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         sections: reportSections,
         status: 'complete',
-        model_version: 'claude-sonnet-4-20250514',
+        model_version: 'claude-haiku-4-5-20251001',
         word_count: wordCount,
       })
       .select()
@@ -160,30 +161,40 @@ export async function POST(request: NextRequest) {
 
     if (reportError) throw reportError
 
-    // Marcar análise como concluída
     await supabase
       .from('analyses')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('id', analysisId)
 
     return NextResponse.json({ data: report }, { status: 201 })
+
   } catch (error) {
     console.error('[POST /api/reports]', error)
+    // Repor status para 'error' para permitir nova tentativa
+    if (analysisId) {
+      try {
+        const supabaseErr = await createClient()
+        await supabaseErr
+          .from('analyses')
+          .update({ status: 'error' })
+          .eq('id', analysisId)
+      } catch { /* best effort */ }
+    }
     return NextResponse.json({ error: 'Erro ao gerar relatório' }, { status: 500 })
   }
 }
 
 function sectionTitle(key: string): string {
   const titles: Record<string, string> = {
-    executive_summary:     'Sumário Executivo',
-    liquidity_analysis:    'Análise de Liquidez',
-    profitability_analysis:'Análise de Rentabilidade',
-    financial_structure:   'Estrutura Financeira',
-    operational_quality:   'Qualidade Operacional',
-    risk_signals:          'Sinais de Alerta',
-    scenarios:             'Cenários e Projecções',
-    recommendations:       'Recomendações',
-    disclaimer:            'Aviso Legal',
+    executive_summary:      'Sumário Executivo',
+    liquidity_analysis:     'Análise de Liquidez',
+    profitability_analysis: 'Análise de Rentabilidade',
+    financial_structure:    'Estrutura Financeira',
+    operational_quality:    'Qualidade Operacional',
+    risk_signals:           'Sinais de Alerta',
+    scenarios:              'Cenários e Projecções',
+    recommendations:        'Recomendações',
+    disclaimer:             'Aviso Legal',
   }
   return titles[key] ?? key
 }
