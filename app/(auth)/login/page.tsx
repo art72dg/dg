@@ -42,6 +42,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-white">
             Turnaround <span className="text-emerald-400">AI</span>
           </h1>
+          <p className="text-xs text-slate-600 mt-1">by DUO International</p>
           <p className="mt-2 text-slate-400">Entra na tua conta</p>
         </div>
 

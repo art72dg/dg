@@ -34,9 +34,14 @@ export default async function DashboardPage() {
       {/* Nav */}
       <nav className="border-b border-slate-800 bg-slate-900">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <span className="font-bold text-white">
-            Turnaround <span className="text-emerald-400">AI</span>
-          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="font-bold text-white">
+              Turnaround <span className="text-emerald-400">AI</span>
+            </span>
+            <a href="https://www.duointernational.pt" target="_blank" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">
+              duointernational.pt
+            </a>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-400">{user.email}</span>
             <form action="/api/auth/signout" method="POST">

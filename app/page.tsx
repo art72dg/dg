@@ -2,7 +2,25 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="flex flex-col flex-1 items-center justify-center min-h-screen bg-slate-950 px-6">
+    <main className="flex flex-col flex-1 min-h-screen bg-slate-950">
+      {/* Top bar */}
+      <div className="border-b border-slate-800/60 px-6 py-3 flex items-center justify-between">
+        <a
+          href="https://www.duointernational.pt"
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          <span>←</span>
+          <span>DUO International</span>
+        </a>
+        <a
+          href="https://www.duointernational.pt"
+          className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
+        >
+          duointernational.pt
+        </a>
+      </div>
+
+    <div className="flex flex-col flex-1 items-center justify-center px-6">
       {/* Hero */}
       <div className="max-w-3xl w-full text-center space-y-8">
         {/* Badge */}
@@ -16,6 +34,12 @@ export default function Home() {
           Turnaround{" "}
           <span className="text-emerald-400">AI</span>
         </h1>
+        <p className="text-sm text-slate-500 -mt-4">
+          Uma ferramenta da{" "}
+          <a href="https://www.duointernational.pt" className="hover:text-slate-400 underline underline-offset-2 transition-colors">
+            DUO International
+          </a>
+        </p>
 
         <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
           Diagnóstico financeiro premium para empresas em dificuldade.
@@ -96,9 +120,16 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-20 text-center text-xs text-slate-600 pb-8">
-        Turnaround AI · Análise indicativa, não constitui conselho de investimento
+      <footer className="mt-20 text-center text-xs text-slate-600 pb-8 space-y-1">
+        <p>
+          Turnaround AI · Uma ferramenta da{" "}
+          <a href="https://www.duointernational.pt" className="hover:text-slate-400 underline underline-offset-2 transition-colors">
+            DUO International
+          </a>
+        </p>
+        <p>Análise indicativa, não constitui conselho de investimento</p>
       </footer>
+    </div>
     </main>
   );
 }

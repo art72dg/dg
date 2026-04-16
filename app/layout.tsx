@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Turnaround AI — Diagnóstico Financeiro",
-  description: "Plataforma de diagnóstico premium para empresas em dificuldade. Análise financeira, scoring de risco e dossiers estratégicos gerados por IA.",
+  title: "Turnaround AI by DUO International — Diagnóstico Financeiro",
+  description: "Ferramenta de diagnóstico financeiro da DUO International. Scoring estruturado em 5 blocos, análise de risco e dossiers estratégicos para empresas em momentos decisivos.",
 };
 
 export default function RootLayout({
