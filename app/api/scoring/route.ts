@@ -63,6 +63,8 @@ const ScoringRequestSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  let analysisId: string | null = null
+
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -81,7 +83,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { analysisId, financialData, qualitativeData } = parsed.data
+    analysisId = parsed.data.analysisId
+    const { financialData, qualitativeData } = parsed.data
 
     // Verificar que a análise pertence ao utilizador
     const { data: analysis, error: analysisError } = await supabase
@@ -135,6 +138,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: scoringResult }, { status: 200 })
   } catch (error) {
     console.error('[POST /api/scoring]', error)
+    // Rollback de status para 'error' para permitir nova tentativa
+    if (analysisId) {
+      try {
+        const supabaseErr = await createClient()
+        await supabaseErr
+          .from('analyses')
+          .update({ status: 'error' })
+          .eq('id', analysisId)
+      } catch { /* best effort */ }
+    }
     return NextResponse.json(
       { error: 'Erro ao calcular score' },
       { status: 500 }

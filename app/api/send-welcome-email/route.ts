@@ -1,6 +1,7 @@
 // app/api/send-welcome-email/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -132,6 +133,17 @@ async function sendViaResend(
 }
 
 export async function POST(req: NextRequest) {
+  // Verificar autenticação — evita spam de emails por chamadas não autorizadas
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+  } catch {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
   // Parse + validate body
   let parsed: z.infer<typeof bodySchema>
   try {

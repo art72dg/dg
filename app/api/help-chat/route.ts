@@ -1,6 +1,7 @@
 // app/api/help-chat/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
 
 const SYSTEM_PROMPT = `És o assistente de suporte da Turnaround AI, uma ferramenta de diagnóstico financeiro da DUO International.
 
@@ -16,6 +17,13 @@ Responde sempre em português europeu, de forma concisa e profissional. Não inv
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticação — evita consumo de créditos por chamadas não autorizadas
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { message, history } = body as {
       message: string

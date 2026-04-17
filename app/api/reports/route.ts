@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       .eq('analysis_id', analysisId)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (!scoringData) {
       return NextResponse.json(
