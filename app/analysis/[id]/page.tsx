@@ -14,6 +14,7 @@ import type { ReportSection } from '@/types/report'
 
 interface PageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ payment?: string }>
 }
 
 // Simple markdown-to-html (headings, bold, bullets, line breaks)
@@ -46,17 +47,23 @@ function renderMarkdown(content: string): string {
 function StatusCard({
   status,
   analysisId,
+  paymentStatus,
   errorMessage,
 }: {
   status: AnalysisStatus
   analysisId: string
+  paymentStatus: 'free' | 'paid'
   errorMessage?: string | null
 }) {
+  const draftDescription = paymentStatus === 'paid'
+    ? 'Pagamento confirmado. Clica em "Gerar Dossier Completo" para produzir o relatório.'
+    : 'Score calculado. Adquire o Dossier Completo para obter o relatório narrativo detalhado.'
+
   const configs: Record<string, { icon: string; title: string; description: string; color: string }> = {
     draft: {
       icon: '📋',
-      title: 'Rascunho',
-      description: 'A análise foi criada e o score calculado. Clica em "Gerar Dossier" para produzir o relatório completo.',
+      title: 'Score Calculado',
+      description: draftDescription,
       color: 'text-slate-400',
     },
     scoring: {
@@ -91,7 +98,7 @@ function StatusCard({
             <p className="text-slate-400 text-sm mt-2 max-w-sm mx-auto">{config.description}</p>
           </div>
           {(status === 'draft' || status === 'error') && (
-            <GenerateDossierButton analysisId={analysisId} />
+            <GenerateDossierButton analysisId={analysisId} paymentStatus={paymentStatus} />
           )}
           {(status === 'scoring' || status === 'generating') && (
             <div className="flex items-center justify-center gap-2 text-slate-500 text-sm">
@@ -105,8 +112,9 @@ function StatusCard({
   )
 }
 
-export default async function AnalysisPage({ params }: PageProps) {
+export default async function AnalysisPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { payment } = await searchParams
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -141,6 +149,8 @@ export default async function AnalysisPage({ params }: PageProps) {
     .maybeSingle()
 
   const status = analysis.status as AnalysisStatus
+  const paymentStatus = (analysis.payment_status ?? 'free') as 'free' | 'paid'
+  const paymentJustConfirmed = payment === 'success'
   const company = Array.isArray(analysis.companies) ? analysis.companies[0] : analysis.companies
   const scoring = scoringData
     ? {
@@ -206,11 +216,29 @@ export default async function AnalysisPage({ params }: PageProps) {
           )}
         </div>
 
+        {/* Banner de pagamento confirmado */}
+        {paymentJustConfirmed && paymentStatus === 'paid' && status !== 'completed' && (
+          <div style={{
+            padding: '0.875rem 1.25rem',
+            border: '1px solid hsl(143 55% 35% / 0.4)',
+            borderRadius: 'var(--radius)',
+            background: 'hsl(143 55% 35% / 0.08)',
+            color: 'hsl(143 55% 55%)',
+            fontSize: '0.875rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            ✓ Pagamento confirmado — podes agora gerar o dossier completo.
+          </div>
+        )}
+
         {/* ── Status: not completed ───────────────────────────────────────── */}
         {status !== 'completed' && (
           <StatusCard
             status={status}
             analysisId={id}
+            paymentStatus={paymentStatus}
             errorMessage={analysis.error_message as string | null}
           />
         )}
@@ -315,7 +343,7 @@ export default async function AnalysisPage({ params }: PageProps) {
 
             {/* Generate report if scoring done but no report yet */}
             {!reportSections && (
-              <StatusCard status="draft" analysisId={id} />
+              <StatusCard status="draft" analysisId={id} paymentStatus={paymentStatus} />
             )}
           </>
         )}

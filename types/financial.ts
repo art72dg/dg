@@ -50,6 +50,17 @@ export interface FinancialData {
   cashFlow?: CashFlowStatement
 }
 
+export interface YoYTrend {
+  previousPeriod: string
+  revenueGrowthPct: number | null       // % crescimento receita
+  ebitdaMarginChangePp: number | null   // variação pp margem EBITDA
+  netMarginChangePp: number | null      // variação pp margem líquida
+  equityChangePct: number | null        // % variação capital próprio
+  debtChangePct: number | null          // % variação dívida total
+  cashChangePct: number | null          // % variação tesouraria
+  currentRatioChange: number | null     // variação absoluta current ratio
+}
+
 export interface QualitativeData {
   // Sinais críticos
   hasCovenantBreach: boolean

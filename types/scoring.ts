@@ -1,4 +1,5 @@
 // types/scoring.ts
+import type { YoYTrend } from './financial'
 
 export type RiskLevel = 'green' | 'yellow' | 'orange' | 'red'
 
@@ -46,6 +47,7 @@ export interface ScoringResult {
   dataCompleteness: number // 0–100%
   calculatedAt: string     // ISO 8601
   version: string          // versão do algoritmo
+  trend?: YoYTrend         // análise YoY se dados do ano anterior fornecidos
 }
 
 // Constantes

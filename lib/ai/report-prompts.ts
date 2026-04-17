@@ -1,7 +1,26 @@
 // lib/ai/report-prompts.ts
 import { ScoringResult, RISK_LEVEL_LABELS } from '@/types/scoring'
 import { CompanyProfile } from '@/types/company'
-import { FinancialData } from '@/types/financial'
+import { FinancialData, YoYTrend } from '@/types/financial'
+
+function formatTrendValue(value: number | null, suffix: string, decimals = 1): string {
+  if (value === null) return 'n/d'
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(decimals)}${suffix}`
+}
+
+function buildTrendSection(trend: YoYTrend): string {
+  return `
+## Análise de Tendência — ${trend.previousPeriod} → Ano actual
+- **Crescimento de Receita:** ${formatTrendValue(trend.revenueGrowthPct, '%')}
+- **Variação Margem EBITDA:** ${formatTrendValue(trend.ebitdaMarginChangePp, ' pp')}
+- **Variação Margem Líquida:** ${formatTrendValue(trend.netMarginChangePp, ' pp')}
+- **Capital Próprio:** ${formatTrendValue(trend.equityChangePct, '%')}
+- **Dívida Total:** ${formatTrendValue(trend.debtChangePct, '%')}
+- **Tesouraria (Cash):** ${formatTrendValue(trend.cashChangePct, '%')}
+- **Variação Current Ratio:** ${formatTrendValue(trend.currentRatioChange, 'x', 2)}
+`
+}
 
 export const LEGAL_DISCLAIMER = `
 ---
@@ -16,7 +35,8 @@ Turnaround AI e os seus operadores não assumem qualquer responsabilidade por pe
 
 export function buildSystemPrompt(
   company: CompanyProfile,
-  scoring: ScoringResult
+  scoring: ScoringResult,
+  trend?: YoYTrend
 ): string {
   const riskLabel = RISK_LEVEL_LABELS[scoring.riskLevel]
 
@@ -43,17 +63,20 @@ ${scoring.flags.length > 0
   : 'Sem flags críticos identificados.'
 }
 
+${trend ? buildTrendSection(trend) : ''}
 ## Instruções
 - Escreve em Português Europeu, tom profissional mas acessível
 - Usa markdown com headers, listas e negrito onde adequado
 - Baseia-te APENAS nos dados fornecidos — não inventes números
 - Quando os dados são insuficientes, indica-o explicitamente
-- Identifica claramente que a análise é gerada por IA`
+- Identifica claramente que a análise é gerada por IA
+${trend ? '- Incorpora a análise de tendência YoY nas secções relevantes' : ''}`
 }
 
 export function buildReportSections(
   scoring: ScoringResult,
-  financial: FinancialData
+  financial: FinancialData,
+  trend?: YoYTrend
 ): Array<{ key: string; prompt: string }> {
   const liq = scoring.blocks.find(b => b.name === 'liquidity')?.rawScore.toFixed(1)
   const prof = scoring.blocks.find(b => b.name === 'profitability')?.rawScore.toFixed(1)
@@ -87,9 +110,13 @@ export function buildReportSections(
       key: 'risk_signals',
       prompt: `Sinais de Alerta — ${criticals} críticos, ${warnings} avisos (máx. 150 palavras): risco, impacto e acção imediata para cada flag crítico.`,
     },
+    ...(trend ? [{
+      key: 'trend_analysis',
+      prompt: `Análise de Tendência YoY — ${trend.previousPeriod} vs ano actual (máx. 150 palavras): interpreta as variações de receita (${formatTrendValue(trend.revenueGrowthPct, '%')}), margem EBITDA (${formatTrendValue(trend.ebitdaMarginChangePp, ' pp')}), capital próprio (${formatTrendValue(trend.equityChangePct, '%')}) e dívida (${formatTrendValue(trend.debtChangePct, '%')}). Identifica se a trajectória é de melhoria, deterioração ou estagnação.`,
+    }] : []),
     {
       key: 'scenarios',
-      prompt: `3 Cenários 12-18 meses (máx. 150 palavras): Base / Optimista / Pessimista — probabilidade e 2 indicadores cada.`,
+      prompt: `3 Cenários 12-18 meses (máx. 150 palavras): Base / Optimista / Pessimista — probabilidade e 2 indicadores cada.${trend ? ' Considera a trajectória YoY identificada.' : ''}`,
     },
     {
       key: 'recommendations',

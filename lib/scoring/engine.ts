@@ -1,7 +1,7 @@
 // lib/scoring/engine.ts
 // Motor de scoring principal — orquestra os 5 blocos
 
-import { FinancialData, QualitativeData } from '@/types/financial'
+import { FinancialData, QualitativeData, YoYTrend } from '@/types/financial'
 import { ScoringResult, RiskLevel, RISK_LEVEL_THRESHOLDS } from '@/types/scoring'
 import { calculateLiquidity } from './blocks/liquidity'
 import { calculateProfitability } from './blocks/profitability'
@@ -14,6 +14,39 @@ interface ScoringInput {
   analysisId: string
   financialData: FinancialData
   qualitativeData: QualitativeData
+  previousYearData?: FinancialData   // opcional — activa análise YoY
+}
+
+function calculateYoYTrend(current: FinancialData, previous: FinancialData): YoYTrend {
+  const { incomeStatement: ci, balanceSheet: cb } = current
+  const { incomeStatement: pi, balanceSheet: pb } = previous
+
+  const pctChange = (curr: number, prev: number): number | null =>
+    prev !== 0 ? ((curr - prev) / Math.abs(prev)) * 100 : null
+
+  const currentEbitdaMargin = ci.revenue !== 0 ? (ci.ebitda / ci.revenue) * 100 : null
+  const prevEbitdaMargin    = pi.revenue !== 0 ? (pi.ebitda / pi.revenue) * 100 : null
+  const currentNetMargin    = ci.revenue !== 0 ? (ci.netIncome / ci.revenue) * 100 : null
+  const prevNetMargin       = pi.revenue !== 0 ? (pi.netIncome / pi.revenue) * 100 : null
+  const currentRatio = cb.currentLiabilities !== 0 ? cb.currentAssets / cb.currentLiabilities : null
+  const prevRatio    = pb.currentLiabilities !== 0 ? pb.currentAssets / pb.currentLiabilities : null
+
+  return {
+    previousPeriod: previous.period,
+    revenueGrowthPct: pctChange(ci.revenue, pi.revenue),
+    ebitdaMarginChangePp:
+      currentEbitdaMargin !== null && prevEbitdaMargin !== null
+        ? currentEbitdaMargin - prevEbitdaMargin : null,
+    netMarginChangePp:
+      currentNetMargin !== null && prevNetMargin !== null
+        ? currentNetMargin - prevNetMargin : null,
+    equityChangePct: pctChange(cb.equity, pb.equity),
+    debtChangePct:   pctChange(cb.totalLiabilities, pb.totalLiabilities),
+    cashChangePct:   pctChange(cb.cash, pb.cash),
+    currentRatioChange:
+      currentRatio !== null && prevRatio !== null
+        ? currentRatio - prevRatio : null,
+  }
 }
 
 export function getRiskLevel(score: number): RiskLevel {
@@ -54,7 +87,7 @@ function calcDataCompleteness(data: FinancialData): number {
 }
 
 export function calculateScore(input: ScoringInput): ScoringResult {
-  const { analysisId, financialData, qualitativeData } = input
+  const { analysisId, financialData, qualitativeData, previousYearData } = input
 
   // Calcular cada bloco
   const liquidityBlock   = calculateLiquidity(financialData)
@@ -71,6 +104,7 @@ export function calculateScore(input: ScoringInput): ScoringResult {
 
   const riskLevel = getRiskLevel(score)
   const dataCompleteness = calcDataCompleteness(financialData)
+  const trend = previousYearData ? calculateYoYTrend(financialData, previousYearData) : undefined
 
   return {
     id: crypto.randomUUID(),
@@ -82,5 +116,6 @@ export function calculateScore(input: ScoringInput): ScoringResult {
     dataCompleteness,
     calculatedAt: new Date().toISOString(),
     version: '1.0.0',
+    trend,
   }
 }

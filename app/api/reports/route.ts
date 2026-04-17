@@ -8,7 +8,7 @@ import { generateReport } from '@/lib/ai/claude-client'
 import { buildSystemPrompt, buildReportSections, LEGAL_DISCLAIMER } from '@/lib/ai/report-prompts'
 import type { ScoringResult } from '@/types/scoring'
 import type { CompanyProfile } from '@/types/company'
-import type { FinancialData } from '@/types/financial'
+import type { FinancialData, YoYTrend } from '@/types/financial'
 
 const GenerateReportSchema = z.object({
   analysisId: z.string().uuid(),
@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
       .update({ status: 'generating' })
       .eq('id', analysisId)
 
+    const trend = scoringData.trend as YoYTrend | undefined
+
     const scoring: ScoringResult = {
       id: scoringData.id,
       analysisId,
@@ -93,6 +95,7 @@ export async function POST(request: NextRequest) {
       dataCompleteness: scoringData.data_completeness,
       calculatedAt: scoringData.calculated_at,
       version: scoringData.algorithm_version,
+      trend,
     }
 
     const company = analysis.companies as unknown as CompanyProfile
@@ -123,8 +126,8 @@ export async function POST(request: NextRequest) {
     } as FinancialData
 
     // Gerar relatório com Haiku (rápido, < 15s)
-    const systemPrompt = buildSystemPrompt(company, scoring)
-    const sections = buildReportSections(scoring, financial)
+    const systemPrompt = buildSystemPrompt(company, scoring, trend)
+    const sections = buildReportSections(scoring, financial, trend)
     const generatedSections = await generateReport(systemPrompt, sections)
 
     const reportSections = [
@@ -192,6 +195,7 @@ function sectionTitle(key: string): string {
     financial_structure:    'Estrutura Financeira',
     operational_quality:    'Qualidade Operacional',
     risk_signals:           'Sinais de Alerta',
+    trend_analysis:         'Análise de Tendência (YoY)',
     scenarios:              'Cenários e Projecções',
     recommendations:        'Recomendações',
     disclaimer:             'Aviso Legal',

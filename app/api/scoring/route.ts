@@ -5,6 +5,42 @@ import { createClient } from '@/lib/supabase/server'
 import { calculateScore } from '@/lib/scoring/engine'
 import type { FinancialData, QualitativeData } from '@/types/financial'
 
+const FinancialDataSchema = z.object({
+  period: z.string(),
+  currency: z.string().default('EUR'),
+  unit: z.enum(['units', 'thousands', 'millions']).default('units'),
+  balanceSheet: z.object({
+    totalAssets: z.number(),
+    currentAssets: z.number(),
+    cash: z.number(),
+    accountsReceivable: z.number().optional(),
+    inventory: z.number().optional(),
+    nonCurrentAssets: z.number().optional(),
+    totalLiabilities: z.number(),
+    currentLiabilities: z.number(),
+    shortTermDebt: z.number().optional(),
+    accountsPayable: z.number().optional(),
+    nonCurrentLiabilities: z.number().optional(),
+    longTermDebt: z.number().optional(),
+    equity: z.number(),
+    retainedEarnings: z.number().optional(),
+  }),
+  incomeStatement: z.object({
+    revenue: z.number(),
+    grossProfit: z.number().optional(),
+    ebitda: z.number(),
+    ebit: z.number().optional(),
+    interestExpense: z.number(),
+    netIncome: z.number(),
+    depreciation: z.number().optional(),
+  }),
+  cashFlow: z.object({
+    operatingCashFlow: z.number().optional(),
+    capitalExpenditure: z.number().optional(),
+    freeCashFlow: z.number().optional(),
+  }).optional(),
+})
+
 const ScoringRequestSchema = z.object({
   analysisId: z.string().uuid(),
   financialData: z.object({
@@ -60,6 +96,7 @@ const ScoringRequestSchema = z.object({
     hasNewStrategicShareholder: z.boolean().default(false),
     additionalContext: z.string().optional(),
   }),
+  previousYearData: FinancialDataSchema.optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -84,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     analysisId = parsed.data.analysisId
-    const { financialData, qualitativeData } = parsed.data
+    const { financialData, qualitativeData, previousYearData } = parsed.data
 
     // Verificar que a análise pertence ao utilizador
     const { data: analysis, error: analysisError } = await supabase
@@ -109,6 +146,7 @@ export async function POST(request: NextRequest) {
       analysisId,
       financialData: financialData as FinancialData,
       qualitativeData: qualitativeData as QualitativeData,
+      previousYearData: previousYearData as FinancialData | undefined,
     })
 
     // Guardar resultado
@@ -123,6 +161,7 @@ export async function POST(request: NextRequest) {
         flags: scoringResult.flags,
         data_completeness: scoringResult.dataCompleteness,
         algorithm_version: scoringResult.version,
+        trend: scoringResult.trend ?? null,
       })
       .select()
       .single()
