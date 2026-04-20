@@ -94,7 +94,11 @@ export function calculateScore(input: ScoringInput): ScoringResult {
   const profitBlock      = calculateProfitability(financialData)
   const structureBlock   = calculateFinancialStructure(financialData)
   const operationalBlock = calculateOperationalQuality(financialData)
-  const signalsResult    = calculateCriticalSignals({ qualitative: qualitativeData })
+  const signalsResult    = calculateCriticalSignals({
+    qualitative: qualitativeData,
+    aging: financialData.agingData,
+    assetSale: financialData.assetSaleData,
+  })
 
   const blocks = [liquidityBlock, profitBlock, structureBlock, operationalBlock, signalsResult]
 

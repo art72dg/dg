@@ -1,10 +1,12 @@
 // lib/scoring/blocks/critical-signals.ts
-import { QualitativeData } from '@/types/financial'
+import { QualitativeData, AgingSchedule, AssetSaleData } from '@/types/financial'
 import { ScoringBlock, ScoringMetric, RiskFlag } from '@/types/scoring'
 import { clamp } from '@/lib/utils'
 
 interface CriticalSignalsInput {
   qualitative: QualitativeData
+  aging?: AgingSchedule
+  assetSale?: AssetSaleData
 }
 
 interface CriticalSignalsResult extends ScoringBlock {
@@ -20,7 +22,7 @@ interface CriticalSignalsResult extends ScoringBlock {
 export function calculateCriticalSignals(
   input: CriticalSignalsInput
 ): CriticalSignalsResult {
-  const { qualitative } = input
+  const { qualitative, aging, assetSale } = input
   const flags: RiskFlag[] = []
   let score = 100
 
@@ -183,6 +185,56 @@ export function calculateCriticalSignals(
       impact: 8,
       description: 'Dívida renegociada — melhora perfil de vencimentos e serviço da dívida.',
     })
+  }
+
+  // ─── Sinais derivados de aging (fornecedores > 90 dias) ─────
+  if (aging?.payablesOver90 && aging.payablesOver90 > 0) {
+    const apTotal =
+      (aging.payablesUnder30 ?? 0) +
+      (aging.payables30to60 ?? 0) +
+      (aging.payables60to90 ?? 0) +
+      (aging.payablesOver90 ?? 0)
+    const over90Ratio = apTotal > 0 ? aging.payablesOver90 / apTotal : 0
+
+    if (over90Ratio > 0.20) {
+      const penalty = over90Ratio > 0.40 ? -10 : -6
+      score += penalty
+      flags.push({
+        code: 'payables_over_90',
+        label: `Fornecedores > 90 dias (${(over90Ratio * 100).toFixed(0)}% do total)`,
+        severity: over90Ratio > 0.40 ? 'critical' : 'warning',
+        impact: penalty,
+        description: 'Atraso material em contas a pagar — risco de ruptura com fornecedores.',
+      })
+    }
+  }
+
+  // ─── Bonificação por plano B de activos realizáveis ─────────
+  if (assetSale) {
+    const totalRealizable =
+      assetSale.totalEstimatedRealizableValue ??
+      ((assetSale.realEstateRealizableValue ?? 0) +
+       (assetSale.equipmentRealizableValue ?? 0) +
+       (assetSale.subsidiariesRealizableValue ?? 0) +
+       (assetSale.investmentsRealizableValue ?? 0))
+
+    const hasAnyPlan =
+      assetSale.hasNonCoreRealEstate ||
+      assetSale.hasEquipmentForSale ||
+      assetSale.hasSubsidiariesForDivestiture ||
+      assetSale.hasInvestmentsForSale
+
+    if (hasAnyPlan && totalRealizable > 0) {
+      const bonus = totalRealizable > 0 ? 4 : 0
+      score += bonus
+      flags.push({
+        code: 'asset_sale_plan',
+        label: 'Plano de Alienação de Activos Identificado',
+        severity: 'info',
+        impact: bonus,
+        description: 'Activos não estratégicos identificados para alienação — fonte alternativa de liquidez.',
+      })
+    }
   }
 
   if (qualitative.hasNewStrategicShareholder) {

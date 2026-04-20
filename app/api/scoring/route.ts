@@ -97,6 +97,38 @@ const ScoringRequestSchema = z.object({
     additionalContext: z.string().optional(),
   }),
   previousYearData: FinancialDataSchema.optional(),
+  agingData: z.object({
+    receivablesUnder30: z.number(),
+    receivables30to60: z.number().optional(),
+    receivables60to90: z.number().optional(),
+    receivablesOver90: z.number(),
+    receivablesDisputed: z.number().optional(),
+    payablesUnder30: z.number().optional(),
+    payables30to60: z.number().optional(),
+    payables60to90: z.number().optional(),
+    payablesOver90: z.number().optional(),
+  }).optional(),
+  treasuryData: z.object({
+    availableCreditLines: z.number().optional(),
+    committedFacilities: z.number().optional(),
+    projectedInflows30d: z.number().optional(),
+    projectedOutflows30d: z.number().optional(),
+    projectedInflows90d: z.number().optional(),
+    projectedOutflows90d: z.number().optional(),
+    daysUntilCashOut: z.number().optional(),
+  }).optional(),
+  assetSaleData: z.object({
+    hasNonCoreRealEstate: z.boolean(),
+    realEstateRealizableValue: z.number().optional(),
+    hasEquipmentForSale: z.boolean(),
+    equipmentRealizableValue: z.number().optional(),
+    hasSubsidiariesForDivestiture: z.boolean(),
+    subsidiariesRealizableValue: z.number().optional(),
+    hasInvestmentsForSale: z.boolean(),
+    investmentsRealizableValue: z.number().optional(),
+    totalEstimatedRealizableValue: z.number().optional(),
+    timelineMonths: z.number().optional(),
+  }).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -121,7 +153,15 @@ export async function POST(request: NextRequest) {
     }
 
     analysisId = parsed.data.analysisId
-    const { financialData, qualitativeData, previousYearData } = parsed.data
+    const { financialData, qualitativeData, previousYearData, agingData, treasuryData, assetSaleData } = parsed.data
+
+    // Enriquecer financialData com dados estendidos para o motor de scoring
+    const enrichedFinancialData: FinancialData = {
+      ...(financialData as FinancialData),
+      ...(agingData ? { agingData } : {}),
+      ...(treasuryData ? { treasuryData } : {}),
+      ...(assetSaleData ? { assetSaleData } : {}),
+    }
 
     // Verificar que a análise pertence ao utilizador
     const { data: analysis, error: analysisError } = await supabase
@@ -144,7 +184,7 @@ export async function POST(request: NextRequest) {
     // Calcular score
     const scoringResult = calculateScore({
       analysisId,
-      financialData: financialData as FinancialData,
+      financialData: enrichedFinancialData,
       qualitativeData: qualitativeData as QualitativeData,
       previousYearData: previousYearData as FinancialData | undefined,
     })

@@ -13,7 +13,7 @@ import { safeDiv, clamp } from '@/lib/utils'
  * - Free Cash Flow positivo (10%)
  */
 export function calculateLiquidity(data: FinancialData): ScoringBlock {
-  const { balanceSheet, cashFlow } = data
+  const { balanceSheet, cashFlow, agingData, treasuryData } = data
   const {
     currentAssets, currentLiabilities, cash,
     inventory = 0, accountsReceivable = 0,
@@ -102,7 +102,74 @@ export function calculateLiquidity(data: FinancialData): ScoringBlock {
   })
 
   // Score do bloco (média ponderada das métricas)
-  const rawScore = metrics.reduce((sum, m) => sum + m.score * m.weight, 0)
+  const baseScore = metrics.reduce((sum, m) => sum + m.score * m.weight, 0)
+
+  // ── Ajustes com dados estendidos (aging & treasury) ──────────
+  // Só se aplicam quando há dados disponíveis; caso contrário, neutros.
+  let adjustment = 0
+
+  // 5. Runway (dias até cash-out) — treasury
+  if (treasuryData?.daysUntilCashOut !== undefined) {
+    const runway = treasuryData.daysUntilCashOut
+    const runwayAdj =
+      runway < 30  ? -15 :
+      runway < 60  ? -8  :
+      runway < 90  ? -4  :
+      runway >= 180 ? 4  : 0
+    adjustment += runwayAdj
+
+    metrics.push({
+      name: 'Runway (dias)',
+      value: runway,
+      benchmark: 90,
+      score: clamp(100 + runwayAdj * 5, 0, 100),
+      weight: 0, // metric informativa — score já reflectido via adjustment
+      flag: runway < 30 ? 'critical' : runway < 90 ? 'warning' : undefined,
+    })
+  }
+
+  // 6. Buffer de linhas de crédito disponíveis — treasury
+  if (treasuryData?.availableCreditLines && currentLiabilities > 0) {
+    const bufferRatio = treasuryData.availableCreditLines / currentLiabilities
+    if (bufferRatio >= 0.2) adjustment += 5
+    else if (bufferRatio >= 0.1) adjustment += 2
+
+    metrics.push({
+      name: 'Crédito disponível / Passivo corrente',
+      value: bufferRatio,
+      benchmark: 0.2,
+      score: clamp(bufferRatio * 500, 0, 100),
+      weight: 0,
+    })
+  }
+
+  // 7. Incobrabilidade — aging (receivablesOver90 / total AR)
+  if (agingData && accountsReceivable > 0) {
+    const arTotal =
+      (agingData.receivablesUnder30 ?? 0) +
+      (agingData.receivables30to60 ?? 0) +
+      (agingData.receivables60to90 ?? 0) +
+      (agingData.receivablesOver90 ?? 0)
+    const baseAR = arTotal > 0 ? arTotal : accountsReceivable
+    const over90Ratio = agingData.receivablesOver90 / baseAR
+
+    const agingAdj =
+      over90Ratio > 0.50 ? -12 :
+      over90Ratio > 0.30 ? -6  :
+      over90Ratio > 0.15 ? -3  : 0
+    adjustment += agingAdj
+
+    metrics.push({
+      name: 'Recebimentos > 90 dias (% AR)',
+      value: over90Ratio * 100,
+      benchmark: 15,
+      score: clamp(100 - over90Ratio * 200, 0, 100),
+      weight: 0,
+      flag: over90Ratio > 0.30 ? 'warning' : undefined,
+    })
+  }
+
+  const rawScore = clamp(baseScore + adjustment, 0, 100)
 
   const interpretation = rawScore >= 75
     ? 'Posição de liquidez sólida — empresa consegue cumprir obrigações de curto prazo com folga.'
