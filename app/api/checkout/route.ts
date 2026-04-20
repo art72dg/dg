@@ -14,12 +14,14 @@ function getStripe() {
 
 export async function POST(request: NextRequest) {
   try {
-    const stripe = getStripe()
+    // Auth check FIRST — before touching Stripe (env var may not be set)
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
+
+    const stripe = getStripe()
 
     const { analysisId } = await request.json() as { analysisId: string }
     if (!analysisId) {
