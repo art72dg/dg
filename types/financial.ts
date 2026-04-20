@@ -48,6 +48,9 @@ export interface FinancialData {
   balanceSheet: BalanceSheet
   incomeStatement: IncomeStatement
   cashFlow?: CashFlowStatement
+  agingData?: AgingSchedule
+  treasuryData?: TreasuryData
+  assetSaleData?: AssetSaleData
 }
 
 export interface YoYTrend {
@@ -59,6 +62,47 @@ export interface YoYTrend {
   debtChangePct: number | null          // % variação dívida total
   cashChangePct: number | null          // % variação tesouraria
   currentRatioChange: number | null     // variação absoluta current ratio
+}
+
+// ── Aging schedules (antiguidade de saldos) ──────────────────────────────
+export interface AgingSchedule {
+  // Clientes — contas a receber
+  receivablesUnder30: number       // < 30 dias correntes
+  receivables30to60?: number       // 30–60 dias
+  receivables60to90?: number       // 60–90 dias
+  receivablesOver90: number        // > 90 dias (risco de incobrabilidade)
+  receivablesDisputed?: number     // montante em litígio/disputa
+
+  // Fornecedores — contas a pagar
+  payablesUnder30?: number         // < 30 dias
+  payables30to60?: number          // 30–60 dias
+  payables60to90?: number          // 60–90 dias
+  payablesOver90?: number          // > 90 dias (atraso grave)
+}
+
+// ── Treasury & liquidity data ────────────────────────────────────────────
+export interface TreasuryData {
+  availableCreditLines?: number    // linhas de crédito disponíveis não utilizadas
+  committedFacilities?: number     // facilidades comprometidas mas não utilizadas
+  projectedInflows30d?: number     // entradas de caixa previstas a 30 dias
+  projectedOutflows30d?: number    // saídas de caixa previstas a 30 dias
+  projectedInflows90d?: number     // entradas de caixa previstas a 90 dias
+  projectedOutflows90d?: number    // saídas de caixa previstas a 90 dias
+  daysUntilCashOut?: number        // dias estimados até esgotamento de caixa (burn)
+}
+
+// ── Asset sale potential ──────────────────────────────────────────────────
+export interface AssetSaleData {
+  hasNonCoreRealEstate: boolean
+  realEstateRealizableValue?: number        // valor realizável estimado
+  hasEquipmentForSale: boolean
+  equipmentRealizableValue?: number
+  hasSubsidiariesForDivestiture: boolean
+  subsidiariesRealizableValue?: number
+  hasInvestmentsForSale: boolean
+  investmentsRealizableValue?: number
+  totalEstimatedRealizableValue?: number    // soma estimada total
+  timelineMonths?: number                   // prazo estimado para realização (meses)
 }
 
 export interface QualitativeData {

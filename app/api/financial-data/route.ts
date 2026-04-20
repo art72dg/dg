@@ -55,6 +55,41 @@ const QualitativeDataSchema = z.object({
   additionalContext: z.string().optional(),
 })
 
+const AgingSchema = z.object({
+  receivablesUnder30: z.number(),
+  receivables30to60: z.number().optional(),
+  receivables60to90: z.number().optional(),
+  receivablesOver90: z.number(),
+  receivablesDisputed: z.number().optional(),
+  payablesUnder30: z.number().optional(),
+  payables30to60: z.number().optional(),
+  payables60to90: z.number().optional(),
+  payablesOver90: z.number().optional(),
+})
+
+const TreasurySchema = z.object({
+  availableCreditLines: z.number().optional(),
+  committedFacilities: z.number().optional(),
+  projectedInflows30d: z.number().optional(),
+  projectedOutflows30d: z.number().optional(),
+  projectedInflows90d: z.number().optional(),
+  projectedOutflows90d: z.number().optional(),
+  daysUntilCashOut: z.number().optional(),
+})
+
+const AssetSaleSchema = z.object({
+  hasNonCoreRealEstate: z.boolean(),
+  realEstateRealizableValue: z.number().optional(),
+  hasEquipmentForSale: z.boolean(),
+  equipmentRealizableValue: z.number().optional(),
+  hasSubsidiariesForDivestiture: z.boolean(),
+  subsidiariesRealizableValue: z.number().optional(),
+  hasInvestmentsForSale: z.boolean(),
+  investmentsRealizableValue: z.number().optional(),
+  totalEstimatedRealizableValue: z.number().optional(),
+  timelineMonths: z.number().optional(),
+})
+
 const SaveFinancialDataSchema = z.object({
   analysisId: z.string().uuid(),
   period: z.string().min(1).max(20),
@@ -63,6 +98,9 @@ const SaveFinancialDataSchema = z.object({
   balanceSheet: BalanceSheetSchema,
   incomeStatement: IncomeStatementSchema,
   cashFlow: CashFlowSchema.optional(),
+  agingData: AgingSchema.optional(),
+  treasuryData: TreasurySchema.optional(),
+  assetSaleData: AssetSaleSchema.optional(),
   qualitativeData: QualitativeDataSchema.optional(),
 })
 
@@ -85,7 +123,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { analysisId, period, currency, unit, balanceSheet, incomeStatement, cashFlow, qualitativeData } = parsed.data
+    const { analysisId, period, currency, unit, balanceSheet, incomeStatement, cashFlow, agingData, treasuryData, assetSaleData, qualitativeData } = parsed.data
 
     // Verificar que a análise pertence ao utilizador
     const { data: analysis, error: analysisError } = await supabase
@@ -139,6 +177,10 @@ export async function POST(request: NextRequest) {
       operating_cash_flow: cashFlow?.operatingCashFlow ?? null,
       capital_expenditure: cashFlow?.capitalExpenditure ?? null,
       free_cash_flow: cashFlow?.freeCashFlow ?? null,
+      // Extended financial data as JSONB
+      aging_data: agingData ?? null,
+      treasury_data: treasuryData ?? null,
+      asset_sale_data: assetSaleData ?? null,
       // Qualitative data as JSONB
       qualitative_data: qualitativeData ?? null,
     }

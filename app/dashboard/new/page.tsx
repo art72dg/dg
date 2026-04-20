@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import type { CompanySector, CompanySize } from '@/types/company'
-import type { QualitativeData } from '@/types/financial'
+import type { QualitativeData, AgingSchedule, TreasuryData, AssetSaleData } from '@/types/financial'
 
 // ── Step 1 data ───────────────────────────────────────────────────────────────
 interface CompanyFormData {
@@ -48,7 +48,42 @@ interface FinancialFormData {
   freeCashFlow: string
 }
 
-// ── Step 3 data ───────────────────────────────────────────────────────────────
+// ── Step 3 data — Tesouraria & Ativos ─────────────────────────────────────────
+interface AgingFormData {
+  receivablesUnder30: string
+  receivables30to60: string
+  receivables60to90: string
+  receivablesOver90: string
+  receivablesDisputed: string
+  payablesUnder30: string
+  payables30to60: string
+  payables60to90: string
+  payablesOver90: string
+}
+
+interface TreasuryFormData {
+  availableCreditLines: string
+  committedFacilities: string
+  projectedInflows30d: string
+  projectedOutflows30d: string
+  projectedInflows90d: string
+  projectedOutflows90d: string
+  daysUntilCashOut: string
+}
+
+interface AssetFormData {
+  hasNonCoreRealEstate: boolean
+  realEstateRealizableValue: string
+  hasEquipmentForSale: boolean
+  equipmentRealizableValue: string
+  hasSubsidiariesForDivestiture: boolean
+  subsidiariesRealizableValue: string
+  hasInvestmentsForSale: boolean
+  investmentsRealizableValue: string
+  timelineMonths: string
+}
+
+// ── Step 4 data ───────────────────────────────────────────────────────────────
 type QualFormData = Omit<QualitativeData, 'clientConcentrationPct' | 'additionalContext'> & {
   clientConcentrationPct: string
   additionalContext: string
@@ -95,6 +130,27 @@ const initialFinancial: FinancialFormData = {
   revenue: '', grossProfit: '', ebitda: '', ebit: '',
   interestExpense: '', netIncome: '',
   operatingCashFlow: '', capitalExpenditure: '', freeCashFlow: '',
+}
+
+const initialAging: AgingFormData = {
+  receivablesUnder30: '', receivables30to60: '', receivables60to90: '',
+  receivablesOver90: '', receivablesDisputed: '',
+  payablesUnder30: '', payables30to60: '', payables60to90: '', payablesOver90: '',
+}
+
+const initialTreasury: TreasuryFormData = {
+  availableCreditLines: '', committedFacilities: '',
+  projectedInflows30d: '', projectedOutflows30d: '',
+  projectedInflows90d: '', projectedOutflows90d: '',
+  daysUntilCashOut: '',
+}
+
+const initialAssets: AssetFormData = {
+  hasNonCoreRealEstate: false, realEstateRealizableValue: '',
+  hasEquipmentForSale: false, equipmentRealizableValue: '',
+  hasSubsidiariesForDivestiture: false, subsidiariesRealizableValue: '',
+  hasInvestmentsForSale: false, investmentsRealizableValue: '',
+  timelineMonths: '',
 }
 
 const initialQual: QualFormData = {
@@ -147,7 +203,18 @@ export default function NewAnalysisPage() {
     description: '',
   })
   const [financial, setFinancial] = useState<FinancialFormData>(initialFinancial)
+  const [hasPreviousYear, setHasPreviousYear] = useState(false)
+  const [prevFinancial, setPrevFinancial] = useState<FinancialFormData>({
+    ...initialFinancial,
+    period: (new Date().getFullYear() - 1).toString(),
+  })
+  const [aging, setAging] = useState<AgingFormData>(initialAging)
+  const [treasury, setTreasury] = useState<TreasuryFormData>(initialTreasury)
+  const [assets, setAssets] = useState<AssetFormData>(initialAssets)
   const [qual, setQual] = useState<QualFormData>(initialQual)
+  const [uploadParsing, setUploadParsing] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
 
   // ── Step 1 submit ──────────────────────────────────────────────────────────
   async function handleStep1(e: React.FormEvent) {
@@ -171,8 +238,15 @@ export default function NewAnalysisPage() {
     setStep(3)
   }
 
-  // ── Step 3 submit (final) ─────────────────────────────────────────────────
+  // ── Step 3 submit (tesouraria & ativos) ──────────────────────────────────
   async function handleStep3(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setStep(4)
+  }
+
+  // ── Step 4 submit (final) ─────────────────────────────────────────────────
+  async function handleStep4(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
@@ -257,6 +331,43 @@ export default function NewAnalysisPage() {
                 freeCashFlow: parseNum(financial.freeCashFlow),
               }
             : undefined,
+        agingData: aging.receivablesUnder30 || aging.receivablesOver90
+          ? {
+              receivablesUnder30: num(aging.receivablesUnder30),
+              receivables30to60: parseNum(aging.receivables30to60),
+              receivables60to90: parseNum(aging.receivables60to90),
+              receivablesOver90: num(aging.receivablesOver90),
+              receivablesDisputed: parseNum(aging.receivablesDisputed),
+              payablesUnder30: parseNum(aging.payablesUnder30),
+              payables30to60: parseNum(aging.payables30to60),
+              payables60to90: parseNum(aging.payables60to90),
+              payablesOver90: parseNum(aging.payablesOver90),
+            }
+          : undefined,
+        treasuryData: treasury.availableCreditLines || treasury.projectedInflows30d || treasury.daysUntilCashOut
+          ? {
+              availableCreditLines: parseNum(treasury.availableCreditLines),
+              committedFacilities: parseNum(treasury.committedFacilities),
+              projectedInflows30d: parseNum(treasury.projectedInflows30d),
+              projectedOutflows30d: parseNum(treasury.projectedOutflows30d),
+              projectedInflows90d: parseNum(treasury.projectedInflows90d),
+              projectedOutflows90d: parseNum(treasury.projectedOutflows90d),
+              daysUntilCashOut: parseNum(treasury.daysUntilCashOut),
+            }
+          : undefined,
+        assetSaleData: assets.hasNonCoreRealEstate || assets.hasEquipmentForSale || assets.hasSubsidiariesForDivestiture || assets.hasInvestmentsForSale
+          ? {
+              hasNonCoreRealEstate: assets.hasNonCoreRealEstate,
+              realEstateRealizableValue: parseNum(assets.realEstateRealizableValue),
+              hasEquipmentForSale: assets.hasEquipmentForSale,
+              equipmentRealizableValue: parseNum(assets.equipmentRealizableValue),
+              hasSubsidiariesForDivestiture: assets.hasSubsidiariesForDivestiture,
+              subsidiariesRealizableValue: parseNum(assets.subsidiariesRealizableValue),
+              hasInvestmentsForSale: assets.hasInvestmentsForSale,
+              investmentsRealizableValue: parseNum(assets.investmentsRealizableValue),
+              timelineMonths: parseNum(assets.timelineMonths),
+            }
+          : undefined,
         qualitativeData: {
           hasCovenantBreach: qual.hasCovenantBreach,
           hasInsolvencyProceedings: qual.hasInsolvencyProceedings,
@@ -325,6 +436,44 @@ export default function NewAnalysisPage() {
                 }
               : undefined,
         },
+        previousYearData: buildPreviousYearData(),
+        agingData: aging.receivablesUnder30 || aging.receivablesOver90
+          ? {
+              receivablesUnder30: num(aging.receivablesUnder30),
+              receivables30to60: parseNum(aging.receivables30to60),
+              receivables60to90: parseNum(aging.receivables60to90),
+              receivablesOver90: num(aging.receivablesOver90),
+              receivablesDisputed: parseNum(aging.receivablesDisputed),
+              payablesUnder30: parseNum(aging.payablesUnder30),
+              payables30to60: parseNum(aging.payables30to60),
+              payables60to90: parseNum(aging.payables60to90),
+              payablesOver90: parseNum(aging.payablesOver90),
+            }
+          : undefined,
+        treasuryData: treasury.availableCreditLines || treasury.projectedInflows30d || treasury.daysUntilCashOut
+          ? {
+              availableCreditLines: parseNum(treasury.availableCreditLines),
+              committedFacilities: parseNum(treasury.committedFacilities),
+              projectedInflows30d: parseNum(treasury.projectedInflows30d),
+              projectedOutflows30d: parseNum(treasury.projectedOutflows30d),
+              projectedInflows90d: parseNum(treasury.projectedInflows90d),
+              projectedOutflows90d: parseNum(treasury.projectedOutflows90d),
+              daysUntilCashOut: parseNum(treasury.daysUntilCashOut),
+            }
+          : undefined,
+        assetSaleData: assets.hasNonCoreRealEstate || assets.hasEquipmentForSale || assets.hasSubsidiariesForDivestiture || assets.hasInvestmentsForSale
+          ? {
+              hasNonCoreRealEstate: assets.hasNonCoreRealEstate,
+              realEstateRealizableValue: parseNum(assets.realEstateRealizableValue),
+              hasEquipmentForSale: assets.hasEquipmentForSale,
+              equipmentRealizableValue: parseNum(assets.equipmentRealizableValue),
+              hasSubsidiariesForDivestiture: assets.hasSubsidiariesForDivestiture,
+              subsidiariesRealizableValue: parseNum(assets.subsidiariesRealizableValue),
+              hasInvestmentsForSale: assets.hasInvestmentsForSale,
+              investmentsRealizableValue: parseNum(assets.investmentsRealizableValue),
+              timelineMonths: parseNum(assets.timelineMonths),
+            }
+          : undefined,
         qualitativeData: {
           hasCovenantBreach: qual.hasCovenantBreach,
           hasInsolvencyProceedings: qual.hasInsolvencyProceedings,
@@ -369,8 +518,177 @@ export default function NewAnalysisPage() {
     setFinancial(prev => ({ ...prev, [key]: value }))
   }
 
+  function setPF(key: keyof FinancialFormData, value: string) {
+    setPrevFinancial(prev => ({ ...prev, [key]: value }))
+  }
+
+  function setAg(key: keyof AgingFormData, value: string) {
+    setAging(prev => ({ ...prev, [key]: value }))
+  }
+
+  function setTr(key: keyof TreasuryFormData, value: string) {
+    setTreasury(prev => ({ ...prev, [key]: value }))
+  }
+
+  function setAs(key: keyof AssetFormData, value: boolean | string) {
+    setAssets(prev => ({ ...prev, [key]: value }))
+  }
+
   function setQ(key: keyof QualFormData, value: boolean | string) {
     setQual(prev => ({ ...prev, [key]: value }))
+  }
+
+  // ── File upload & parse ───────────────────────────────────────────────────
+  async function handleFileUpload(file: File) {
+    setUploadParsing(true)
+    setUploadError(null)
+    setUploadSuccess(false)
+
+    try {
+      const form = new FormData()
+      form.append('file', file)
+
+      const res = await fetch('/api/parse-financial-file', { method: 'POST', body: form })
+      const body = await res.json() as { data?: Record<string, unknown>; error?: string }
+
+      if (!res.ok || !body.data) {
+        throw new Error(body.error ?? 'Erro ao processar ficheiro')
+      }
+
+      const d = body.data
+
+      // ── Pre-fill current year financial form ─────────────────────────────
+      if (d.period && typeof d.period === 'string') setF('period', d.period)
+      if (d.currency && typeof d.currency === 'string') setF('currency', d.currency)
+      if (d.unit && typeof d.unit === 'string') setF('unit', d.unit as 'units' | 'thousands' | 'millions')
+
+      const bs = d.balanceSheet as Record<string, number> | undefined
+      if (bs) {
+        if (bs.totalAssets)       setF('totalAssets',       String(bs.totalAssets))
+        if (bs.currentAssets)     setF('currentAssets',     String(bs.currentAssets))
+        if (bs.cash)              setF('cash',              String(bs.cash))
+        if (bs.accountsReceivable) setF('accountsReceivable', String(bs.accountsReceivable))
+        if (bs.inventory)         setF('inventory',         String(bs.inventory))
+        if (bs.totalLiabilities)  setF('totalLiabilities',  String(bs.totalLiabilities))
+        if (bs.currentLiabilities) setF('currentLiabilities', String(bs.currentLiabilities))
+        if (bs.shortTermDebt)     setF('shortTermDebt',     String(bs.shortTermDebt))
+        if (bs.accountsPayable)   setF('accountsPayable',   String(bs.accountsPayable))
+        if (bs.longTermDebt)      setF('longTermDebt',      String(bs.longTermDebt))
+        if (bs.equity)            setF('equity',            String(bs.equity))
+      }
+
+      const is = d.incomeStatement as Record<string, number> | undefined
+      if (is) {
+        if (is.revenue)         setF('revenue',         String(is.revenue))
+        if (is.grossProfit)     setF('grossProfit',     String(is.grossProfit))
+        if (is.ebitda)          setF('ebitda',          String(is.ebitda))
+        if (is.ebit)            setF('ebit',            String(is.ebit))
+        if (is.interestExpense) setF('interestExpense', String(is.interestExpense))
+        if (is.netIncome)       setF('netIncome',       String(is.netIncome))
+      }
+
+      const cf = d.cashFlow as Record<string, number> | undefined
+      if (cf) {
+        if (cf.operatingCashFlow)   setF('operatingCashFlow',   String(cf.operatingCashFlow))
+        if (cf.capitalExpenditure)  setF('capitalExpenditure',  String(cf.capitalExpenditure))
+        if (cf.freeCashFlow)        setF('freeCashFlow',        String(cf.freeCashFlow))
+      }
+
+      // ── Pre-fill aging data ───────────────────────────────────────────────
+      const ag = d.agingData as Record<string, number> | undefined
+      if (ag) {
+        if (ag.receivablesUnder30) setAg('receivablesUnder30', String(ag.receivablesUnder30))
+        if (ag.receivables30to60)  setAg('receivables30to60',  String(ag.receivables30to60))
+        if (ag.receivables60to90)  setAg('receivables60to90',  String(ag.receivables60to90))
+        if (ag.receivablesOver90)  setAg('receivablesOver90',  String(ag.receivablesOver90))
+        if (ag.receivablesDisputed) setAg('receivablesDisputed', String(ag.receivablesDisputed))
+        if (ag.payablesUnder30)    setAg('payablesUnder30',    String(ag.payablesUnder30))
+        if (ag.payables30to60)     setAg('payables30to60',     String(ag.payables30to60))
+        if (ag.payables60to90)     setAg('payables60to90',     String(ag.payables60to90))
+        if (ag.payablesOver90)     setAg('payablesOver90',     String(ag.payablesOver90))
+      }
+
+      // ── Pre-fill treasury data ────────────────────────────────────────────
+      const tr = d.treasuryData as Record<string, number> | undefined
+      if (tr) {
+        if (tr.availableCreditLines)  setTr('availableCreditLines',  String(tr.availableCreditLines))
+        if (tr.committedFacilities)   setTr('committedFacilities',   String(tr.committedFacilities))
+        if (tr.projectedInflows30d)   setTr('projectedInflows30d',   String(tr.projectedInflows30d))
+        if (tr.projectedOutflows30d)  setTr('projectedOutflows30d',  String(tr.projectedOutflows30d))
+        if (tr.projectedInflows90d)   setTr('projectedInflows90d',   String(tr.projectedInflows90d))
+        if (tr.projectedOutflows90d)  setTr('projectedOutflows90d',  String(tr.projectedOutflows90d))
+        if (tr.daysUntilCashOut)      setTr('daysUntilCashOut',      String(tr.daysUntilCashOut))
+      }
+
+      // ── Pre-fill previous year data ────────────────────────────────────────
+      const prev = d.previousYear as Record<string, unknown> | undefined
+      if (prev) {
+        setHasPreviousYear(true)
+        if (prev.period && typeof prev.period === 'string') setPF('period', prev.period)
+        const pbs = prev.balanceSheet as Record<string, number> | undefined
+        if (pbs) {
+          if (pbs.totalAssets)       setPF('totalAssets',       String(pbs.totalAssets))
+          if (pbs.currentAssets)     setPF('currentAssets',     String(pbs.currentAssets))
+          if (pbs.cash)              setPF('cash',              String(pbs.cash))
+          if (pbs.totalLiabilities)  setPF('totalLiabilities',  String(pbs.totalLiabilities))
+          if (pbs.currentLiabilities) setPF('currentLiabilities', String(pbs.currentLiabilities))
+          if (pbs.longTermDebt)      setPF('longTermDebt',      String(pbs.longTermDebt))
+          if (pbs.equity)            setPF('equity',            String(pbs.equity))
+        }
+        const pis = prev.incomeStatement as Record<string, number> | undefined
+        if (pis) {
+          if (pis.revenue)         setPF('revenue',         String(pis.revenue))
+          if (pis.ebitda)          setPF('ebitda',          String(pis.ebitda))
+          if (pis.netIncome)       setPF('netIncome',       String(pis.netIncome))
+          if (pis.interestExpense) setPF('interestExpense', String(pis.interestExpense))
+        }
+      }
+
+      setUploadSuccess(true)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Erro ao processar ficheiro')
+    } finally {
+      setUploadParsing(false)
+    }
+  }
+
+  // ── Build previousYearData for scoring API ────────────────────────────────
+  function buildPreviousYearData() {
+    if (!hasPreviousYear || !prevFinancial.totalAssets) return undefined
+    return {
+      period: prevFinancial.period,
+      currency: prevFinancial.currency,
+      unit: prevFinancial.unit,
+      balanceSheet: {
+        totalAssets: num(prevFinancial.totalAssets),
+        currentAssets: num(prevFinancial.currentAssets),
+        cash: num(prevFinancial.cash),
+        accountsReceivable: parseNum(prevFinancial.accountsReceivable),
+        inventory: parseNum(prevFinancial.inventory),
+        totalLiabilities: num(prevFinancial.totalLiabilities),
+        currentLiabilities: num(prevFinancial.currentLiabilities),
+        shortTermDebt: parseNum(prevFinancial.shortTermDebt),
+        accountsPayable: parseNum(prevFinancial.accountsPayable),
+        longTermDebt: parseNum(prevFinancial.longTermDebt),
+        equity: num(prevFinancial.equity),
+      },
+      incomeStatement: {
+        revenue: num(prevFinancial.revenue),
+        grossProfit: parseNum(prevFinancial.grossProfit),
+        ebitda: num(prevFinancial.ebitda),
+        ebit: parseNum(prevFinancial.ebit),
+        interestExpense: num(prevFinancial.interestExpense),
+        netIncome: num(prevFinancial.netIncome),
+      },
+      cashFlow:
+        prevFinancial.operatingCashFlow || prevFinancial.capitalExpenditure || prevFinancial.freeCashFlow
+          ? {
+              operatingCashFlow: parseNum(prevFinancial.operatingCashFlow),
+              capitalExpenditure: parseNum(prevFinancial.capitalExpenditure),
+              freeCashFlow: parseNum(prevFinancial.freeCashFlow),
+            }
+          : undefined,
+    }
   }
 
   return (
@@ -404,7 +722,8 @@ export default function NewAnalysisPage() {
           {[
             { n: 1, label: 'Empresa' },
             { n: 2, label: 'Financeiro' },
-            { n: 3, label: 'Sinais' },
+            { n: 3, label: 'Tesouraria' },
+            { n: 4, label: 'Sinais' },
           ].map(({ n, label }) => (
             <div key={n} className="flex items-center gap-2">
               <div
@@ -425,7 +744,7 @@ export default function NewAnalysisPage() {
               >
                 {label}
               </span>
-              {n < 3 && <div className="w-8 h-px bg-slate-700 mx-1" />}
+              {n < 4 && <div className="w-8 h-px bg-slate-700 mx-1" />}
             </div>
           ))}
         </div>
@@ -513,6 +832,69 @@ export default function NewAnalysisPage() {
         {/* ── Step 2: Financial data ────────────────────────────────────────── */}
         {step === 2 && (
           <form onSubmit={handleStep2} className="space-y-6">
+
+            {/* ── File upload card ───────────────────────────────────────────── */}
+            <Card>
+              <CardContent>
+                <div className="py-1">
+                  <p className="text-sm font-medium text-white mb-1">
+                    Importar dados de um ficheiro
+                    <span className="ml-2 text-xs font-normal text-slate-500">(opcional)</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Carrega um PDF, Excel (.xlsx), CSV ou imagem com os dados financeiros — a IA extrai os valores automaticamente.
+                  </p>
+
+                  <label className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+                    uploadParsing
+                      ? 'border-slate-700 bg-slate-900/50 cursor-not-allowed'
+                      : 'border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-950/10'
+                  }`}>
+                    <input
+                      type="file"
+                      accept=".pdf,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      disabled={uploadParsing}
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) handleFileUpload(file)
+                        e.target.value = '' // reset so same file can be re-uploaded
+                      }}
+                    />
+                    {uploadParsing ? (
+                      <>
+                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                        <span className="text-sm text-slate-400">A extrair dados com IA...</span>
+                      </>
+                    ) : uploadSuccess ? (
+                      <>
+                        <span className="text-2xl">✓</span>
+                        <span className="text-sm text-emerald-400 font-medium">Dados extraídos com sucesso</span>
+                        <span className="text-xs text-slate-500">Clica para substituir com outro ficheiro</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-2xl text-slate-500">📎</span>
+                        <span className="text-sm text-slate-400">
+                          Arrasta ou clica para carregar ficheiro
+                        </span>
+                        <span className="text-xs text-slate-600">PDF · Excel · CSV · JPG · PNG — máx. 20 MB</span>
+                      </>
+                    )}
+                  </label>
+
+                  {uploadError && (
+                    <p className="mt-2 text-xs text-red-400">{uploadError}</p>
+                  )}
+                  {uploadSuccess && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Os campos foram pré-preenchidos. Verifica e ajusta os valores antes de continuar.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Period & unit */}
             <Card>
               <CardHeader>
@@ -623,6 +1005,72 @@ export default function NewAnalysisPage() {
               </CardContent>
             </Card>
 
+            {/* ── Previous year toggle ─────────────────────────────────────── */}
+            <Card>
+              <CardContent>
+                <button
+                  type="button"
+                  onClick={() => setHasPreviousYear(p => !p)}
+                  className="w-full flex items-center justify-between py-1 text-left group"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      Tenho dados do ano anterior
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Activa a análise de tendência YoY (crescimento de receita, margens, dívida…)
+                    </p>
+                  </div>
+                  <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${hasPreviousYear ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                    <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${hasPreviousYear ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                </button>
+
+                {hasPreviousYear && (
+                  <div className="mt-6 space-y-5 border-t border-slate-800 pt-6">
+                    <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                      Dados do Ano Anterior
+                    </p>
+
+                    {/* Period row */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <Input
+                        label="Período anterior *"
+                        value={prevFinancial.period}
+                        onChange={e => setPF('period', e.target.value)}
+                        placeholder={(new Date().getFullYear() - 1).toString()}
+                      />
+                    </div>
+
+                    {/* Balance sheet */}
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Balanço — Activo</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input label="Total do Activo *" type="number" value={prevFinancial.totalAssets} onChange={e => setPF('totalAssets', e.target.value)} placeholder="0" />
+                      <Input label="Activo Corrente *" type="number" value={prevFinancial.currentAssets} onChange={e => setPF('currentAssets', e.target.value)} placeholder="0" />
+                      <Input label="Caixa e Equivalentes" type="number" value={prevFinancial.cash} onChange={e => setPF('cash', e.target.value)} placeholder="0" />
+                      <Input label="Contas a Receber" type="number" value={prevFinancial.accountsReceivable} onChange={e => setPF('accountsReceivable', e.target.value)} placeholder="0" />
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider pt-1">Balanço — Passivo & Capital Próprio</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input label="Total do Passivo *" type="number" value={prevFinancial.totalLiabilities} onChange={e => setPF('totalLiabilities', e.target.value)} placeholder="0" />
+                      <Input label="Passivo Corrente" type="number" value={prevFinancial.currentLiabilities} onChange={e => setPF('currentLiabilities', e.target.value)} placeholder="0" />
+                      <Input label="Dívida Total" type="number" value={prevFinancial.longTermDebt} onChange={e => setPF('longTermDebt', e.target.value)} placeholder="0" />
+                      <Input label="Capital Próprio *" type="number" value={prevFinancial.equity} onChange={e => setPF('equity', e.target.value)} placeholder="0" />
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider pt-1">Demonstração de Resultados</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input label="Volume de Negócios *" type="number" value={prevFinancial.revenue} onChange={e => setPF('revenue', e.target.value)} placeholder="0" />
+                      <Input label="EBITDA *" type="number" value={prevFinancial.ebitda} onChange={e => setPF('ebitda', e.target.value)} placeholder="0" />
+                      <Input label="Resultado Líquido" type="number" value={prevFinancial.netIncome} onChange={e => setPF('netIncome', e.target.value)} placeholder="0" />
+                      <Input label="Encargos Financeiros" type="number" value={prevFinancial.interestExpense} onChange={e => setPF('interestExpense', e.target.value)} placeholder="0" />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="flex justify-between">
               <Button variant="secondary" type="button" onClick={() => { setError(null); setStep(1) }}>
                 ← Anterior
@@ -634,9 +1082,157 @@ export default function NewAnalysisPage() {
           </form>
         )}
 
-        {/* ── Step 3: Qualitative signals ───────────────────────────────────── */}
+        {/* ── Step 3: Tesouraria & Ativos ──────────────────────────────────────── */}
         {step === 3 && (
           <form onSubmit={handleStep3} className="space-y-6">
+
+            {/* Aging — Clientes */}
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-white">Antiguidade de Saldos — Clientes</h2>
+                <p className="text-sm text-slate-400">Decomposição das contas a receber por prazo de vencimento</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Corrente (< 30 dias)" type="number" value={aging.receivablesUnder30} onChange={e => setAg('receivablesUnder30', e.target.value)} placeholder="0" />
+                  <Input label="30–60 dias" type="number" value={aging.receivables30to60} onChange={e => setAg('receivables30to60', e.target.value)} placeholder="0" />
+                  <Input label="60–90 dias" type="number" value={aging.receivables60to90} onChange={e => setAg('receivables60to90', e.target.value)} placeholder="0" />
+                  <Input label="> 90 dias (risco)" type="number" value={aging.receivablesOver90} onChange={e => setAg('receivablesOver90', e.target.value)} placeholder="0" />
+                  <Input label="Em litígio / disputa" type="number" value={aging.receivablesDisputed} onChange={e => setAg('receivablesDisputed', e.target.value)} placeholder="0" helperText="Valor de créditos em disputa formal" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Aging — Fornecedores */}
+            <Card>
+              <CardHeader>
+                <h2 className="text-base font-semibold text-white">Antiguidade de Saldos — Fornecedores</h2>
+                <p className="text-sm text-slate-400">Decomposição das contas a pagar por prazo</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Corrente (< 30 dias)" type="number" value={aging.payablesUnder30} onChange={e => setAg('payablesUnder30', e.target.value)} placeholder="0" />
+                  <Input label="30–60 dias" type="number" value={aging.payables30to60} onChange={e => setAg('payables30to60', e.target.value)} placeholder="0" />
+                  <Input label="60–90 dias" type="number" value={aging.payables60to90} onChange={e => setAg('payables60to90', e.target.value)} placeholder="0" />
+                  <Input label="> 90 dias (atraso grave)" type="number" value={aging.payablesOver90} onChange={e => setAg('payablesOver90', e.target.value)} placeholder="0" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Treasury */}
+            <Card>
+              <CardHeader>
+                <h2 className="text-base font-semibold text-white">Disponibilidade de Tesouraria</h2>
+                <p className="text-sm text-slate-400">Liquidez disponível e projeções de curto prazo</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Linhas de crédito disponíveis"
+                      type="number"
+                      value={treasury.availableCreditLines}
+                      onChange={e => setTr('availableCreditLines', e.target.value)}
+                      placeholder="0"
+                      helperText="Crédito aprovado não utilizado"
+                    />
+                    <Input
+                      label="Facilidades comprometidas"
+                      type="number"
+                      value={treasury.committedFacilities}
+                      onChange={e => setTr('committedFacilities', e.target.value)}
+                      placeholder="0"
+                      helperText="Ex: factoring, confirming"
+                    />
+                    <Input
+                      label="Dias até esgotar caixa"
+                      type="number"
+                      value={treasury.daysUntilCashOut}
+                      onChange={e => setTr('daysUntilCashOut', e.target.value)}
+                      placeholder="Ex: 90"
+                      helperText="Cash runway estimado (burn rate)"
+                    />
+                  </div>
+
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider pt-2">Projeções de Caixa</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="Entradas previstas a 30 dias" type="number" value={treasury.projectedInflows30d} onChange={e => setTr('projectedInflows30d', e.target.value)} placeholder="0" />
+                    <Input label="Saídas previstas a 30 dias" type="number" value={treasury.projectedOutflows30d} onChange={e => setTr('projectedOutflows30d', e.target.value)} placeholder="0" />
+                    <Input label="Entradas previstas a 90 dias" type="number" value={treasury.projectedInflows90d} onChange={e => setTr('projectedInflows90d', e.target.value)} placeholder="0" />
+                    <Input label="Saídas previstas a 90 dias" type="number" value={treasury.projectedOutflows90d} onChange={e => setTr('projectedOutflows90d', e.target.value)} placeholder="0" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Asset sales */}
+            <Card>
+              <CardHeader>
+                <h2 className="text-base font-semibold text-white">Possibilidade de Venda de Activos</h2>
+                <p className="text-sm text-slate-400">Activos não estratégicos com potencial de monetização</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  {([
+                    { key: 'hasNonCoreRealEstate' as const, valKey: 'realEstateRealizableValue' as const, label: 'Imóveis não estratégicos', placeholder: 'Valor realizável estimado' },
+                    { key: 'hasEquipmentForSale' as const, valKey: 'equipmentRealizableValue' as const, label: 'Equipamento / maquinaria', placeholder: 'Valor realizável estimado' },
+                    { key: 'hasSubsidiariesForDivestiture' as const, valKey: 'subsidiariesRealizableValue' as const, label: 'Participações / subsidiárias', placeholder: 'Valor realizável estimado' },
+                    { key: 'hasInvestmentsForSale' as const, valKey: 'investmentsRealizableValue' as const, label: 'Investimentos financeiros', placeholder: 'Valor realizável estimado' },
+                  ] as const).map(item => (
+                    <div key={item.key} className="space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={assets[item.key]}
+                          onChange={e => setAs(item.key, e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+                        />
+                        <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{item.label}</span>
+                      </label>
+                      {assets[item.key] && (
+                        <div className="ml-7">
+                          <Input
+                            label={item.placeholder}
+                            type="number"
+                            value={assets[item.valKey]}
+                            onChange={e => setAs(item.valKey, e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {(assets.hasNonCoreRealEstate || assets.hasEquipmentForSale || assets.hasSubsidiariesForDivestiture || assets.hasInvestmentsForSale) && (
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800">
+                      <Input
+                        label="Prazo de realização (meses)"
+                        type="number"
+                        value={assets.timelineMonths}
+                        onChange={e => setAs('timelineMonths', e.target.value)}
+                        placeholder="Ex: 6"
+                        helperText="Estimativa para concluir as vendas"
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button variant="secondary" type="button" onClick={() => { setError(null); setStep(2) }}>
+                ← Anterior
+              </Button>
+              <Button type="submit">
+                Continuar →
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* ── Step 4: Qualitative signals ───────────────────────────────────── */}
+        {step === 4 && (
+          <form onSubmit={handleStep4} className="space-y-6">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-white">Sinais Qualitativos</h2>
@@ -750,7 +1346,7 @@ export default function NewAnalysisPage() {
             </Card>
 
             <div className="flex justify-between">
-              <Button variant="secondary" type="button" onClick={() => { setError(null); setStep(2) }}>
+              <Button variant="secondary" type="button" onClick={() => { setError(null); setStep(3) }}>
                 ← Anterior
               </Button>
               <Button type="submit" loading={submitting}>

@@ -8,7 +8,7 @@ import { generateReport } from '@/lib/ai/claude-client'
 import { buildSystemPrompt, buildReportSections, LEGAL_DISCLAIMER } from '@/lib/ai/report-prompts'
 import type { ScoringResult } from '@/types/scoring'
 import type { CompanyProfile } from '@/types/company'
-import type { FinancialData, YoYTrend } from '@/types/financial'
+import type { FinancialData, YoYTrend, AgingSchedule, TreasuryData, AssetSaleData } from '@/types/financial'
 
 const GenerateReportSchema = z.object({
   analysisId: z.string().uuid(),
@@ -84,6 +84,9 @@ export async function POST(request: NextRequest) {
       .eq('id', analysisId)
 
     const trend = scoringData.trend as YoYTrend | undefined
+    const aging = financialData.aging_data as AgingSchedule | undefined
+    const treasury = financialData.treasury_data as TreasuryData | undefined
+    const assetSale = financialData.asset_sale_data as AssetSaleData | undefined
 
     const scoring: ScoringResult = {
       id: scoringData.id,
@@ -126,8 +129,8 @@ export async function POST(request: NextRequest) {
     } as FinancialData
 
     // Gerar relatório com Haiku (rápido, < 15s)
-    const systemPrompt = buildSystemPrompt(company, scoring, trend)
-    const sections = buildReportSections(scoring, financial, trend)
+    const systemPrompt = buildSystemPrompt(company, scoring, trend, aging, treasury, assetSale)
+    const sections = buildReportSections(scoring, financial, trend, aging, treasury, assetSale)
     const generatedSections = await generateReport(systemPrompt, sections)
 
     const reportSections = [
@@ -196,6 +199,9 @@ function sectionTitle(key: string): string {
     operational_quality:    'Qualidade Operacional',
     risk_signals:           'Sinais de Alerta',
     trend_analysis:         'Análise de Tendência (YoY)',
+    aging_analysis:         'Antiguidade de Saldos',
+    treasury_analysis:      'Tesouraria e Liquidez',
+    asset_monetization:     'Monetização de Activos',
     scenarios:              'Cenários e Projecções',
     recommendations:        'Recomendações',
     disclaimer:             'Aviso Legal',
